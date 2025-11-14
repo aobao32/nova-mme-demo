@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Query S3 Vector Bucket using text with Nova MME"""
+"""Query S3 Vector Bucket using image with Nova MME"""
 
 import boto3
 import json
+import base64
+from pathlib import Path
 from typing import Dict, Any, List
 
 # AWS clients
@@ -13,25 +15,46 @@ s3vectors_client = boto3.client('s3vectors', region_name='us-east-1')
 MODEL_ID = 'amazon.nova-2-multimodal-embeddings-v1:0'
 EMBEDDING_DIMENSION = 3072
 VECTOR_BUCKET = 'my-nova-mme-demo-01'
-#INDEX_NAME = 'my-image-index-01'
 INDEX_NAME = 'my-image-index-02-lambda'
-QUERY_TEXT = 'Wind turbine'
+QUERY_IMAGE = 'search-01.jpg'  # Local image file
 TOP_K = 5  # Number of results to return
 
-def generate_text_embedding(text: str) -> List[float]:
-    """Generate embedding for text using Nova MME"""
-    print(f"\nGenerating embedding for text: '{text}'")
+def get_image_format(file_path: str) -> str:
+    """Determine image format from file extension"""
+    if file_path.lower().endswith('.png'):
+        return 'png'
+    elif file_path.lower().endswith('.gif'):
+        return 'gif'
+    elif file_path.lower().endswith('.webp'):
+        return 'webp'
+    return 'jpeg'
+
+def generate_image_embedding(image_path: str) -> List[float]:
+    """Generate embedding for image using Nova MME"""
+    print(f"\nGenerating embedding for image: '{image_path}'")
     
-    # Prepare model input for text embedding
+    # Read local image file
+    path = Path(image_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+    
+    with open(path, 'rb') as f:
+        image_bytes = f.read()
+    
+    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+    
+    # Prepare model input for image embedding
     # Use GENERIC_RETRIEVAL to match GENERIC_INDEX used during indexing
     model_input = {
         "taskType": "SINGLE_EMBEDDING",
         "singleEmbeddingParams": {
             "embeddingPurpose": "GENERIC_RETRIEVAL",
             "embeddingDimension": EMBEDDING_DIMENSION,
-            "text": {
-                "truncationMode": "END",
-                "value": text
+            "image": {
+                "format": get_image_format(image_path),
+                "source": {
+                    "bytes": image_base64
+                }
             }
         }
     }
@@ -109,7 +132,17 @@ def display_results(results: List[Dict[str, Any]]):
         if metadata:
             print(f"  Metadata:")
             
-            # Display full path
+            # Display source_key (from Lambda)
+            source_key = metadata.get('source_key')
+            if source_key:
+                print(f"    Source Key: {source_key}")
+            
+            # Display s3_uri (from Lambda)
+            s3_uri = metadata.get('s3_uri')
+            if s3_uri:
+                print(f"    S3 URI: {s3_uri}")
+            
+            # Display full_path (from custom script)
             full_path = metadata.get('full_path')
             if full_path:
                 print(f"    Full Path: {full_path}")
@@ -126,19 +159,18 @@ def display_results(results: List[Dict[str, Any]]):
             
             # Display any other metadata
             for key, value in metadata.items():
-                if key not in ['full_path', 'file_name', 'file_path']:
+                if key not in ['source_key', 's3_uri', 'full_path', 'file_name', 'file_path']:
                     print(f"    {key}: {value}")
 
-
 def main():
-    """Main function to query vectors using text"""
+    """Main function to query vectors using image"""
     print("=" * 60)
-    print("Nova MME Text-to-Image Query")
+    print("Nova MME Image-to-Image Query")
     print("=" * 60)
     
     try:
-        # Generate embedding for query text
-        query_embedding = generate_text_embedding(QUERY_TEXT)
+        # Generate embedding for query image
+        query_embedding = generate_image_embedding(QUERY_IMAGE)
         
         # Query S3 Vectors
         results = query_vectors(

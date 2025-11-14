@@ -1,0 +1,38 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": "arn:aws:s3:::nova-mme-demo-source-image/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel"
+            ],
+            "Resource": "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-2-multimodal-embeddings-v1:0"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:PutVectors"
+            ],
+            "Resource": [
+                "arn:aws:s3vectors:us-east-1:133129065110:bucket/my-nova-mme-demo-01",
+                "arn:aws:s3vectors:us-east-1:133129065110:bucket/my-nova-mme-demo-01/index/my-image-index-02-lambda"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+            ],
+            "Resource": "arn:aws:sqs:us-east-1:133129065110:embedding-queue.fifo"
+        }
+    ]
+}
