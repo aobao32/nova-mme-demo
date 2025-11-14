@@ -23,11 +23,11 @@ def generate_text_embedding(text: str) -> List[float]:
     print(f"\nGenerating embedding for text: '{text}'")
     
     # Prepare model input for text embedding
-    # Use GENERIC_RETRIEVAL to match GENERIC_INDEX used during indexing
+    # Use IMAGE_RETRIEVAL to match IMAGE_INDEX used during indexing
     model_input = {
         "taskType": "SINGLE_EMBEDDING",
         "singleEmbeddingParams": {
-            "embeddingPurpose": "GENERIC_RETRIEVAL",
+            "embeddingPurpose": "IMAGE_RETRIEVAL",
             "embeddingDimension": EMBEDDING_DIMENSION,
             "text": {
                 "truncationMode": "END",

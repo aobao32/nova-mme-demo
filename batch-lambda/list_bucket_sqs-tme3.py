@@ -12,10 +12,10 @@ sqs_client = boto3.client('sqs', region_name='us-east-1')
 
 # Configuration
 SOURCE_BUCKET = 'nova-mme-demo-source-image'
-SQS_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/133129065110/embedding-queue.fifo'
+SQS_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/133129065110/embedding-queue-tme3.fifo'
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 BATCH_SIZE = 10  # Number of messages to send in one batch
-PROGRESS_FILE = 'embedding_progress.json'  # Local progress tracking file
+PROGRESS_FILE = 'embedding_progress-tme3.json'  # Local progress tracking file
 
 def list_images_from_s3(bucket: str, prefix: str = '') -> List[Dict]:
     """List all image files from S3 bucket"""

@@ -10,7 +10,7 @@ from datetime import datetime
 sqs_client = boto3.client('sqs', region_name='us-east-1')
 
 # Configuration
-SQS_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/133129065110/embedding-queue.fifo'
+SQS_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/133129065110/embedding-queue-tme3.fifo'
 
 # Test image S3 URI
 TEST_S3_URI = 's3://nova-mme-demo-source-image/01/b-01.jpg'

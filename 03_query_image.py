@@ -44,11 +44,11 @@ def generate_image_embedding(image_path: str) -> List[float]:
     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
     
     # Prepare model input for image embedding
-    # Use GENERIC_RETRIEVAL to match GENERIC_INDEX used during indexing
+    # Use IMAGE_RETRIEVAL to match IMAGE_INDEX used during indexing
     model_input = {
         "taskType": "SINGLE_EMBEDDING",
         "singleEmbeddingParams": {
-            "embeddingPurpose": "GENERIC_RETRIEVAL",
+            "embeddingPurpose": "IMAGE_RETRIEVAL",
             "embeddingDimension": EMBEDDING_DIMENSION,
             "image": {
                 "format": get_image_format(image_path),
