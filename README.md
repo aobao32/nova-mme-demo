@@ -1907,7 +1907,21 @@ python GUI-query.py
 
 至此批量Embedding方案完成。
 
-## 六、参考文档
+## 六、Nova MME与Twelvelabs的Marengo Embed 3.0的对比
+
+Amazon Bedrock服务在2025年10月新增了Twelvelabs的Marengo Embed 3.0模型，也是提供了Bedrock的Serverless API调用，开箱即用，无须私有化部署模型。模型上架时候的文档如下：
+
+[https://aws.amazon.com/about-aws/whats-new/2025/10/twelvelabs-marengo3-embed-amazon-bedrock/](https://aws.amazon.com/about-aws/whats-new/2025/10/twelvelabs-marengo3-embed-amazon-bedrock/)
+
+Marengo Embed 3.0模型支持更大尺寸的视频输入，最大允许6GB体积。参数如下：
+
+[https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-marengo-3.html](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-marengo-3.html)
+
+However，虽然这样，但是，Marengo Embed 3.0采用的维度是512，与Nova MME的3072差距较大，因此再实际文搜图，以本文采用的数据集来看，效果不如Nova MME。Nova MME文搜图时候，召回图片的距离在0.6～0.8，而Marengo Embed 3.0甚至达到0.9，有比较显著差距。但是，Marengo Embed 3.0的维度是512，由此带来较低的成本，而且支持高达6GB的视频输入也是其特色。由此可以看到Marengo Embed 3.0与Nova MME各有不同擅长的领域。
+
+在测试Marengo Embed 3.0时候，Nova MME和Marengo Embed 3.0输出的结果不一样，解析输出数据代码也有所差别。本文的Github代码样例中，文件名带有`-tme3`的后缀的文件，用于测试Marengo Embed 3.0的文件。可参考这部分已经验证通过的代码。注意里边的存储桶、索引名称、SQS队列、Lambda名称、Lambda Handler等名称的对应关系。这里不再展开讨论Marengo Embed 3.0了。
+
+## 七、参考文档
 
 Amazon Nova Multimodal Embeddings: State-of-the-art embedding model for agentic RAG and semantic searchAmazon Nova Multimodal Embeddings: State-of-the-art embedding model for agentic RAG and semantic search
 
