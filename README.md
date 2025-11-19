@@ -1434,9 +1434,9 @@ Delete Vector from S3 Vectors
 
 由此删除向量完成。
 
-## 五、批量Embedding方案的例子
+## 五、使用同步方式批量Embedding的方案
 
-以上例子是使用SDK编程队单个文件的Embedding处理和检索。在上一章节也介绍了使用s3vector-embed-cli批量文件处理S3存储桶的文件，此时s3vector-embed-cli自己做了分批处理。如果是使用SDK编程，那么需要自己编写分批处理逻辑。主要思路如下。
+以上几个例子是使用SDK编程对单个文件的Embedding处理，另外在上一章节也介绍了使用s3vector-embed-cli批量文件处理S3存储桶的文件，此时s3vector-embed-cli自己做了分批处理。如果是有大量文件需要处理，而且不是使用s3vector-embed-cli，那么需要设计一个异步处理的解决方案，并自己编写调用API的代码。主要思路如下。
 
 ### 1、批量处理思路
 
@@ -1445,14 +1445,16 @@ Delete Vector from S3 Vectors
 |处理过程|少量文件|大量文件|
 |---|---|---|
 |获取文件清单|直接在代码中分批处理|将文件清单存储DynamoDB或者使用SQS队列管理任务|
-|Embedding调用|调用Bedrock invoke API同步调用|如果文件尺寸较小可使用同步调用<br>如果是视频体积较大可使用异步调用|
+|Embedding调用|调用Bedrock invoke API同步调用|- 如果处理时限要求高，那么小文件和图片可使用同步调用InvokeModel；视频等文件使用异步调用StartAsyncInvoke；<br>- 如果处理时限不敏感，可接受几个小时的处理时间，那么可使用批量推理Batch Inference，其计费方式只有实时的一半左右|
 |Embedding任务管理|同步调用不需要|使用DynamoDB保存异步任务的状态|
-|并发机制|可单线程或多线程|可单线程或多线程<br>也可借助Lambda执行并发|
-|向量保存|同步处理时可直接写入，但注意S3 Vector Bucket的写入Limit|异步调用模型生成的向量会保存为S3普通存储桶内的jsonl文件，需要二次处理，读取后分批写入S3 Vector Bucket，且需要注意写入Limit|
+|并发机制|可单线程或多线程|- 同步或者异步调用时候可单线程或多线程，也可借助Lambda执行并发<br>- 批调用可提交多个任务|
+|向量保存|同步处理时可直接写入，但注意S3 Vector Bucket的写入Limit|异步调用和批量推理场景，模型输出结果会保存在S3普通存储桶内格式是jsonl，需要被二次处理、读取后分批写入S3 Vector Bucket，且需要注意写入Limit|
 
-结合以上方案看，最简单/成本相对较低的例子，是在云端启动一台EC2，然后直接在EC2上运行Embedding程序，并写入S3 Vector Bucket。如果希望后续能持续对S3存储桶内新增文件进行Embedding，可使用多种AWS服务组合的方式。
+根据以上分析，最简单的方式是在云端启动一台EC2，然后直接在EC2上运行Embedding程序，并写入S3 Vector Bucket。如果希望后续能持续对S3存储桶内新增文件进行Embedding，可使用多种AWS服务组合的方式。
 
-本文选择使用SQS队列作为任务管理，使用Lambda执行并发处理，使用S3 Vector Bucket作为向量存储的架构方式。通过限制Lambda并发，来避免遇到S3 Vector Bucket的写入Limit。同时，在使用Lambda作为SQS的下游时候，一条消息处理完毕后SQS会自动删除，因此就不需要人为地在处理完毕后删除SQS消息的步骤了。
+本文选择使用使用同步调用的方式，这样立刻就可以获取Embedding后的向量进行后续测试，而无需等待数分钟到数小时才能获得结果。在方案中，SQS队列作为任务管理，使用Lambda执行并发处理，使用S3 Vector Bucket作为向量存储的架构方式。通过限制Lambda并发，来避免遇到S3 Vector Bucket的写入Limit。同时，在使用Lambda作为SQS的下游时候，一条消息处理完毕后SQS会自动删除，因此就不需要人为地在处理完毕后删除SQS消息的步骤了。
+
+如果您已经熟悉了整个体系架构，可以批量加载大量数据进行Embedding，那么您可以使用Bedrock Batch Inference批量推理，这将在另外一篇博客中进行介绍。
 
 注意，以下代码中S3 Vector Bucket名字没变，但是Index重新创建了一个。这样由此与前一步的测试分开。
 
@@ -1917,9 +1919,9 @@ Marengo Embed 3.0模型支持更大尺寸的视频输入，最大允许6GB体积
 
 [https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-marengo-3.html](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-marengo-3.html)
 
-However，虽然这样，但是，Marengo Embed 3.0采用的维度是512，与Nova MME的3072差距较大，因此再实际文搜图，以本文采用的数据集来看，效果不如Nova MME。Nova MME文搜图时候，召回图片的距离在0.6～0.8，而Marengo Embed 3.0甚至达到0.9，有比较显著差距。但是，Marengo Embed 3.0的维度是512，由此带来较低的成本，而且支持高达6GB的视频输入也是其特色。由此可以看到Marengo Embed 3.0与Nova MME各有不同擅长的领域。
+However，虽然这样，但是，Marengo Embed 3.0采用的维度是512与Nova MME的3072差别较大。因此在实际文搜图场景中，以本文采用的数据集来看，效果不如Nova MME。Nova MME文搜图时候，召回图片的距离在0.6～0.8，而Marengo Embed 3.0甚至达到0.9，相比有比较显著差距。但是，Marengo Embed 3.0的维度是512，由此带来较低的成本，而且支持高达6GB的视频输入也是其特色。由此可以看到Marengo Embed 3.0与Nova MME各有不同擅长的领域。
 
-在测试Marengo Embed 3.0时候，Nova MME和Marengo Embed 3.0输出的结果不一样，解析输出数据代码也有所差别。本文的Github代码样例中，文件名带有`-tme3`的后缀的文件，用于测试Marengo Embed 3.0的文件。可参考这部分已经验证通过的代码。注意里边的存储桶、索引名称、SQS队列、Lambda名称、Lambda Handler等名称的对应关系。这里不再展开讨论Marengo Embed 3.0了。
+在测试Marengo Embed 3.0时候，Nova MME和Marengo Embed 3.0输出的结果不一样，解析输出数据代码也有所差别。本文的Github代码样例中，文件名带有`-tme3`的后缀的文件，用于测试Marengo Embed 3.0的文件。可参考这部分已经验证通过的代码。注意里边的存储桶、索引名称、SQS队列、Lambda名称、Lambda Handler等名称的对应关系。篇幅所限，这里不再展开讨论Marengo Embed 3.0了。
 
 ## 七、参考文档
 
@@ -1946,6 +1948,10 @@ File limitations for Nova Embeddings
 Amazon S3 Vectors Limitations and restrictions
 
 [https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-limitations.html](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-limitations.html)
+
+Bedrock batch inference 批量推理
+
+[https://docs.aws.amazon.com/bedrock/latest/userguide/batch-inference.html?icmpid=docs_bedrock_help_panel_batch](https://docs.aws.amazon.com/bedrock/latest/userguide/batch-inference.html?icmpid=docs_bedrock_help_panel_batch)
 
 本文有关脚本在Github这里：
 
